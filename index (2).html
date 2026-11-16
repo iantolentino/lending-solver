@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loan calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef2f4;
+    --panel: #ffffff;
+    --ink: #13202b;
+    --muted: #5a6b79;
+    --line: #d6dee4;
+    --accent: #0b6e69;
+    --accent-ink: #ffffff;
+    --accent-soft: #dcefed;
+    --interest: #c2410c;
+    --fee: #7c6a0a;
+    --principal: #0b6e69;
+    --danger: #b42318;
+    --row-alt: #f5f8fa;
+    --font: "IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
+
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e171d;
+      --panel: #16232c;
+      --ink: #e8eef2;
+      --muted: #96a8b5;
+      --line: #2a3b47;
+      --accent: #3fb8b0;
+      --accent-ink: #06201e;
+      --accent-soft: #14393a;
+      --interest: #f08a5d;
+      --fee: #d9c14a;
+      --principal: #3fb8b0;
+      --danger: #ff8a7d;
+      --row-alt: #1a2a34;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e171d;
+    --panel: #16232c;
+    --ink: #e8eef2;
+    --muted: #96a8b5;
+    --line: #2a3b47;
+    --accent: #3fb8b0;
+    --accent-ink: #06201e;
+    --accent-soft: #14393a;
+    --interest: #f08a5d;
+    --fee: #d9c14a;
+    --principal: #3fb8b0;
+    --danger: #ff8a7d;
+    --row-alt: #1a2a34;
+  }
+
+  *, *::before, *::after { box-sizing: inherit; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 28px max(20px, env(safe-area-inset-right)) 48px max(20px, env(safe-area-inset-left)); }
+
+  header.top { margin-bottom: 24px; }
+  header.top h1 { margin: 0 0 4px; font-size: clamp(24px, 5vw, 30px); font-weight: 700; letter-spacing: -0.01em; }
+  header.top p { margin: 0; color: var(--muted); max-width: 60ch; }
+
+  .layout { display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr); gap: 20px; align-items: start; }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; }
+  .panel + .panel { margin-top: 20px; }
+  .panel h2 { margin: 0 0 14px; font-size: 17px; font-weight: 600; }
+
+  .field { margin-bottom: 18px; }
+  .field:last-child { margin-bottom: 0; }
+  label, .field-label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 5px; }
+
+  input[type="number"], input[type="date"], select {
+    width: 100%;
+    min-height: 44px;
+    padding: 11px 12px;
+    font: inherit;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  select { appearance: auto; }
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+  .input-wrap { position: relative; }
+  .input-wrap .affix {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    color: var(--muted); pointer-events: none; font-size: 15px;
+  }
+  .input-wrap .affix.left { left: 12px; }
+  .input-wrap .affix.right { right: 12px; }
+  .input-wrap.has-left input { padding-left: 28px; }
+  .input-wrap.has-right input { padding-right: 62px; }
+
+  input:focus-visible, button:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  input[aria-invalid="true"] { border-color: var(--danger); }
+
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .seg button {
+    min-height: 44px;
+    flex: 1 1 0;
+    min-width: 62px;
+    padding: 9px 6px;
+    font: inherit; font-size: 14px; font-weight: 600;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .seg button:hover { border-color: var(--accent); }
+  .seg button[aria-pressed="true"] {
+    background: var(--accent); color: var(--accent-ink); border-color: var(--accent);
+  }
+  .seg.two button { flex: 1 1 45%; }
+
+  .num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 13px; margin-right: 8px; }
+  details.adv { border-top: 1px solid var(--line); margin-top: 6px; padding-top: 4px; }
+  details.adv summary { cursor: pointer; font-weight: 600; font-size: 15px; min-height: 44px; display: flex; align-items: center; }
+  details.adv[open] summary { margin-bottom: 8px; }
+  .btn.ghost { width: 100%; margin-top: 14px; }
+  .sub-label { font-weight: 500; font-size: 13px; color: var(--muted); margin: 4px 0 6px; }
+  input.custom-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+  .error { color: var(--danger); font-size: 14px; min-height: 0; margin-top: 10px; }
+  .error:empty { display: none; }
+
+  /* Results */
+  .headline {
+    display: flex; flex-wrap: wrap; gap: 8px 36px; align-items: flex-end;
+    padding-bottom: 18px; border-bottom: 1px solid var(--line); margin-bottom: 18px;
+  }
+  .headline .big-label { font-size: 14px; color: var(--muted); font-weight: 500; }
+  .headline .big { font-size: clamp(32px, 9vw, 46px); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .headline .sub { font-size: 14px; color: var(--muted); }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 10px; margin-bottom: 22px; }
+  .stat { padding: 12px 14px; background: var(--row-alt); border-radius: 8px; min-width: 0; }
+  .stat .v { overflow-wrap: anywhere; }
+  .stat .k { font-size: 13px; color: var(--muted); }
+  .stat .v { font-size: 20px; font-weight: 600; }
+  .v.interest { color: var(--interest); }
+
+  .bar-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+  .bar { display: flex; height: 16px; border-radius: 8px; overflow: hidden; background: var(--line); }
+  .bar span { display: block; height: 100%; transition: width .25s ease; }
+  .bar .p { background: var(--principal); }
+  .bar .i { background: var(--interest); }
+  .bar .f { background: var(--fee); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 10px; font-size: 14px; }
+  .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+
+  .note {
+    margin-top: 20px; padding: 12px 14px;
+    background: var(--accent-soft);
+    border-left: 4px solid var(--accent);
+    border-radius: 4px;
+    font-size: 14px; line-height: 1.6;
+  }
+
+  .actions { display: flex; gap: 10px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+  .btn {
+    min-height: 44px;
+    padding: 10px 16px; font: inherit; font-weight: 600; font-size: 14px;
+    border-radius: 8px; cursor: pointer;
+    color: var(--ink); background: var(--panel); border: 1px solid var(--line);
+  }
+  .btn:hover { border-color: var(--accent); }
+  .status { font-size: 14px; color: var(--muted); }
+
+  .table-wrap { overflow-x: auto; max-width: 100%; }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  th, td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th:nth-child(2), td:nth-child(2) { text-align: left; }
+  thead th {
+    font-size: 13px; font-weight: 600; color: var(--muted);
+    border-bottom: 2px solid var(--ink);
+    position: sticky; top: 0; background: var(--panel);
+  }
+  tbody tr:nth-child(even) { background: var(--row-alt); }
+  tfoot td { font-weight: 700; border-bottom: none; border-top: 2px solid var(--ink); }
+
+
+  .img-preview { margin-top: 16px; }
+  .img-preview img { display: block; max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn.primary:hover { filter: brightness(1.08); }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .page { padding-top: 18px; padding-bottom: 36px; }
+    .panel { padding: 16px; }
+    .actions .btn { flex: 1 1 100%; }
+    .actions .status { flex: 1 1 100%; }
+
+    /* Schedule table becomes stacked cards on phones */
+    .table-wrap { overflow: visible; }
+    table, thead, tbody, tfoot, tr, td { display: block; width: 100%; min-width: 0; }
+    table { min-width: 0; }
+    thead { display: none; }
+    tbody tr, tfoot tr {
+      border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; padding: 6px 12px;
+      background: var(--panel);
+    }
+    tbody tr:nth-child(even) { background: var(--row-alt); }
+    td, td:first-child, td:nth-child(2), th:first-child {
+      display: flex; justify-content: space-between; gap: 12px;
+      text-align: right; padding: 7px 0; border-bottom: 1px solid var(--line); white-space: normal;
+    }
+    td:last-child { border-bottom: none; }
+    td::before { content: attr(data-label); font-weight: 500; color: var(--muted); text-align: left; }
+    td:empty { display: none; }
+    tfoot td { border-top: none; }
+    tfoot tr { border: 2px solid var(--ink); }
+  }
+  @media (max-width: 380px) {
+    .row2 { grid-template-columns: minmax(0, 1fr); }
+    .seg button { flex: 1 1 40%; }
+  }
+  @media (min-width: 1400px) {
+    .page { max-width: 1280px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bar span { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="top">
+    <h1>Loan calculator</h1>
+  </header>
+
+  <div class="layout">
+
+    <section class="panel" aria-labelledby="inputs-title">
+      <h2 id="inputs-title">Loan details</h2>
+
+      <div class="field">
+        <label for="loanAmount"><span class="num">1</span>How much is the loan?</label>
+        <div class="input-wrap has-left">
+          <span class="affix left" aria-hidden="true">&#8369;</span>
+          <input type="number" id="loanAmount" value="23000" min="0" step="100" inputmode="decimal">
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label" id="termLabel"><span class="num">2</span>How many months to pay?</span>
+        <div class="seg" role="group" aria-labelledby="termLabel" id="termPresets">
+          <button type="button" data-months="3" aria-pressed="true">3 mo</button>
+          <button type="button" data-months="6" aria-pressed="false">6 mo</button>
+          <button type="button" data-months="9" aria-pressed="false">9 mo</button>
+          <button type="button" data-months="12" aria-pressed="false">12 mo</button>
+        </div>
+        <div class="row2">
+          <div>
+            <label for="monthSelect" class="sub-label">Pick a month count</label>
+            <select id="monthSelect"></select>
+          </div>
+          <div>
+            <label for="months" class="sub-label">Or type your own</label>
+            <div class="input-wrap has-right">
+              <input type="number" id="months" value="3" min="1" max="120" step="1" inputmode="numeric" placeholder="e.g. 18">
+              <span class="affix right" aria-hidden="true">mo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="interestRate"><span class="num">3</span>Interest rate per month</label>
+        <div class="input-wrap has-right">
+          <input type="number" id="interestRate" value="5.73" min="0" step="0.01" inputmode="decimal">
+          <span class="affix right" aria-hidden="true">% / mo</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="startDate"><span class="num">4</span>When does the loan start?</label>
+        <input type="date" id="startDate">
+      </div>
+
+      <div class="field">
+        <label for="firstPay">When is the first payment?</label>
+        <select id="firstPay">
+          <option value="0">Same day as the start date</option>
+          <option value="1" selected>1 month after the start date</option>
+          <option value="2">2 months after the start date</option>
+        </select>
+      </div>
+
+      <details class="adv">
+        <summary>More options</summary>
+      <div class="field">
+        <span class="field-label" id="methodLabel">Interest method</span>
+        <div class="seg two" role="group" aria-labelledby="methodLabel" id="methodToggle">
+          <button type="button" data-method="flat" aria-pressed="true">Flat rate</button>
+          <button type="button" data-method="reducing" aria-pressed="false">Reducing balance</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="feeRate">Processing fee</label>
+        <div class="input-wrap has-right">
+          <input type="number" id="feeRate" value="0" min="0" step="0.1" inputmode="decimal">
+          <span class="affix right" aria-hidden="true">% of loan</span>
+        </div>
+      </div>
+
+      </details>
+
+      <div class="error" id="error" role="alert"></div>
+      <button type="button" class="btn ghost" id="resetBtn">Start over</button>
+    </section>
+
+    <div>
+      <section class="panel" aria-labelledby="summary-title" aria-live="polite">
+        <h2 id="summary-title">Summary</h2>
+
+        <div class="headline">
+          <div>
+            <div class="big-label">Monthly payment</div>
+            <div class="big" id="monthlyPayment">&#8369;0.00</div>
+          </div>
+          <div class="sub" id="termSub"></div>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="k">Total interest</div><div class="v interest" id="totalInterest">&#8369;0.00</div></div>
+          <div class="stat"><div class="k">Total repayment</div><div class="v" id="totalPayment">&#8369;0.00</div></div>
+          <div class="stat"><div class="k">Amount released</div><div class="v" id="netProceeds">&#8369;0.00</div></div>
+          <div class="stat"><div class="k">Effective rate</div><div class="v" id="effRate">0.00%</div></div>
+        </div>
+
+        <div class="bar-title">Where the repayment goes</div>
+        <div class="bar" id="bar" role="img" aria-label="Share of principal, interest and fees in total cost">
+          <span class="p" id="barP"></span><span class="i" id="barI"></span><span class="f" id="barF"></span>
+        </div>
+        <div class="legend">
+          <div><span class="sw" style="background:var(--principal)"></span>Principal <strong id="lgP"></strong></div>
+          <div><span class="sw" style="background:var(--interest)"></span>Interest <strong id="lgI"></strong></div>
+          <div id="lgFWrap"><span class="sw" style="background:var(--fee)"></span>Fee <strong id="lgF"></strong></div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn" id="copyBtn">Copy summary</button>
+          <span class="status" id="copyStatus" role="status"></span>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="image-title">
+        <h2 id="image-title">Send a payment schedule</h2>
+        <div class="actions" style="margin-top:12px">
+          <button type="button" class="btn primary" id="genBorrowerBtn">Create borrower copy</button>
+          <button type="button" class="btn" id="genImgBtn">Create my private copy</button>
+          <button type="button" class="btn" id="saveImgBtn" hidden>Save picture</button>
+          <span class="status" id="imgStatus" role="status"></span>
+        </div>
+        <div class="img-preview" id="imgPreview" hidden>
+          <img id="scheduleImg" alt="Payment schedule with a blank status column">
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="schedule-title">
+        <h2 id="schedule-title">Full payment schedule</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Month</th>
+                <th scope="col">Due date</th>
+                <th scope="col">Payment</th>
+                <th scope="col">Interest</th>
+                <th scope="col">Principal</th>
+                <th scope="col">Balance</th>
+              </tr>
+            </thead>
+            <tbody id="scheduleBody"></tbody>
+            <tfoot id="scheduleFoot"></tfoot>
+          </table>
+        </div>
+      </section>
+
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var method = "flat";
+  var lastText = "";
+  var lastData = null;
+  var imageShown = false;
+
+  var fmt = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP", minimumFractionDigits: 2 });
+  function money(n) { return fmt.format(n); }
+  function r2(n) { return Math.round(n * 100) / 100; }
+  function pct(n) { return n.toFixed(2) + "%"; }
+
+  // Default start date: today
+  (function setDefaultDate() {
+    var d = new Date();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    $("startDate").value = d.getFullYear() + "-" + m + "-" + day;
+  })();
+
+  function addMonths(isoDate, n) {
+    var p = isoDate.split("-");
+    var y = +p[0], m = +p[1] - 1, d = +p[2];
+    var target = new Date(y, m + n, 1);
+    var last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+    target.setDate(Math.min(d, last));
+    return target;
+  }
+  var dateFmt = new Intl.DateTimeFormat("en-PH", { year: "numeric", month: "short", day: "numeric" });
+
+  function buildSchedule(loan, months, rate, kind) {
+    var rows = [];
+    var rem = loan;
+    var i, interest, principal, payment;
+
+    if (kind === "flat") {
+      var totalInt = r2(loan * rate * months);
+      var basePay = r2((loan + totalInt) / months);
+      var baseInt = r2(totalInt / months);
+      var intLeft = totalInt;
+      for (i = 1; i <= months; i++) {
+        if (i === months) {
+          interest = r2(intLeft);
+          principal = r2(rem);
+        } else {
+          interest = baseInt;
+          principal = r2(basePay - interest);
+        }
+        payment = r2(principal + interest);
+        intLeft = r2(intLeft - interest);
+        rem = r2(rem - principal);
+        if (rem < 0) rem = 0;
+        rows.push({ n: i, payment: payment, interest: interest, principal: principal, balance: rem });
+      }
+    } else {
+      var pay;
+      if (rate === 0) pay = r2(loan / months);
+      else pay = r2(loan * rate / (1 - Math.pow(1 + rate, -months)));
+      for (i = 1; i <= months; i++) {
+        interest = r2(rem * rate);
+        if (i === months) principal = r2(rem);
+        else principal = r2(pay - interest);
+        payment = r2(principal + interest);
+        rem = r2(rem - principal);
+        if (rem < 0) rem = 0;
+        rows.push({ n: i, payment: payment, interest: interest, principal: principal, balance: rem });
+      }
+    }
+    return rows;
+  }
+
+  // Monthly rate r where PV of payments equals the net amount released
+  function effectiveRate(net, rows) {
+    if (net <= 0 || !rows.length) return 0;
+    function pv(r) {
+      var s = 0;
+      for (var i = 0; i < rows.length; i++) s += rows[i].payment / Math.pow(1 + r, i + 1);
+      return s;
+    }
+    var lo = 0, hi = 5;
+    if (pv(0) <= net) return 0;
+    for (var k = 0; k < 80; k++) {
+      var mid = (lo + hi) / 2;
+      if (pv(mid) > net) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  function showError(msg) {
+    $("error").textContent = msg;
+    ["loanAmount", "months", "interestRate", "feeRate"].forEach(function (id) {
+      $(id).removeAttribute("aria-invalid");
+    });
+  }
+
+  function clearResults() {
+    $("monthlyPayment").textContent = money(0);
+    $("totalInterest").textContent = money(0);
+    $("totalPayment").textContent = money(0);
+    $("netProceeds").textContent = money(0);
+    $("effRate").textContent = pct(0);
+    $("termSub").textContent = "";
+    $("scheduleBody").innerHTML = "";
+    $("scheduleFoot").innerHTML = "";
+    $("barP").style.width = "0"; $("barI").style.width = "0"; $("barF").style.width = "0";
+    $("lgP").textContent = ""; $("lgI").textContent = ""; $("lgF").textContent = "";
+    lastText = "";
+    lastData = null;
+    if (imageShown) { $("imgPreview").hidden = true; $("saveImgBtn").hidden = true; imageShown = false; }
+  }
+
+  function calculate() {
+    var loan = parseFloat($("loanAmount").value);
+    var months = parseInt($("months").value, 10);
+    var rate = parseFloat($("interestRate").value);
+    var feePct = parseFloat($("feeRate").value);
+    if (isNaN(feePct)) feePct = 0;
+
+    var msg = "", bad = null;
+    if (isNaN(loan) || loan <= 0) { msg = "Enter a loan amount greater than 0."; bad = "loanAmount"; }
+    else if (isNaN(months) || months < 1 || months > 120) { msg = "Enter a term between 1 and 120 months."; bad = "months"; }
+    else if (isNaN(rate) || rate < 0) { msg = "Enter an interest rate of 0 or more."; bad = "interestRate"; }
+    else if (feePct < 0 || feePct >= 100) { msg = "Enter a processing fee between 0 and 99.9%."; bad = "feeRate"; }
+
+    if (msg) {
+      clearResults();
+      $("error").textContent = msg;
+      $(bad).setAttribute("aria-invalid", "true");
+      return;
+    }
+    showError("");
+
+    var mr = rate / 100;
+    var rows = buildSchedule(loan, months, mr, method);
+
+    var totalInterest = 0, totalPayment = 0, totalPrincipal = 0;
+    rows.forEach(function (r) {
+      totalInterest += r.interest; totalPayment += r.payment; totalPrincipal += r.principal;
+    });
+    totalInterest = r2(totalInterest); totalPayment = r2(totalPayment); totalPrincipal = r2(totalPrincipal);
+
+    var fee = r2(loan * feePct / 100);
+    var net = r2(loan - fee);
+    var firstPay = rows[0].payment;
+    var samePay = rows.every(function (r) { return Math.abs(r.payment - firstPay) < 0.011; });
+    var eff = effectiveRate(net, rows) * 100;
+
+    $("monthlyPayment").textContent = money(firstPay);
+    $("termSub").textContent = samePay ? ("for " + months + (months === 1 ? " month" : " months")) :
+      ("for " + months + " months (last payment " + money(rows[rows.length - 1].payment) + ")");
+    $("totalInterest").textContent = money(totalInterest);
+    $("totalPayment").textContent = money(totalPayment);
+    $("netProceeds").textContent = money(net);
+    $("effRate").textContent = pct(eff) + " / mo";
+
+    // Bar: principal, interest and fee as shares of total cost to borrower
+    var cost = totalPrincipal + totalInterest + fee;
+    var wp = cost ? totalPrincipal / cost * 100 : 0;
+    var wi = cost ? totalInterest / cost * 100 : 0;
+    var wf = cost ? fee / cost * 100 : 0;
+    $("barP").style.width = wp + "%";
+    $("barI").style.width = wi + "%";
+    $("barF").style.width = wf + "%";
+    $("lgP").textContent = money(totalPrincipal) + " (" + wp.toFixed(1) + "%)";
+    $("lgI").textContent = money(totalInterest) + " (" + wi.toFixed(1) + "%)";
+    $("lgF").textContent = money(fee) + " (" + wf.toFixed(1) + "%)";
+    $("lgFWrap").style.display = fee > 0 ? "" : "none";
+    $("barF").style.display = fee > 0 ? "" : "none";
+
+    var methodName = method === "flat" ? "flat rate" : "reducing balance";
+    var html = "A loan of <strong>" + money(loan) + "</strong> over <strong>" + months +
+      (months === 1 ? " month" : " months") + "</strong> at <strong>" + rate + "% per month</strong> (" + methodName + ") " +
+      "costs <strong>" + money(totalInterest) + "</strong> in interest. The borrower repays <strong>" + money(totalPayment) + "</strong> in total";
+    if (fee > 0) html += " and receives <strong>" + money(net) + "</strong> after the " + feePct + "% fee";
+    html += ". Measured against the amount actually released, the true cost is <strong>" + pct(eff) + " per month</strong>.";
+
+    var d = $("startDate").value;
+    var offset = parseInt($("firstPay").value, 10) || 0;
+    var body = $("scheduleBody");
+    body.innerHTML = "";
+    rows.forEach(function (r) {
+      var tr = document.createElement("tr");
+      var due = d ? dateFmt.format(addMonths(d, r.n - 1 + offset)) : "-";
+      tr.innerHTML = '<td data-label="Month">' + r.n + '</td><td data-label="Due date">' + due +
+        '</td><td data-label="Payment">' + money(r.payment) + '</td><td data-label="Interest">' +
+        money(r.interest) + '</td><td data-label="Principal">' + money(r.principal) +
+        '</td><td data-label="Balance">' + money(r.balance) + '</td>';
+      body.appendChild(tr);
+    });
+    $("scheduleFoot").innerHTML = '<tr><td data-label="Total">Total</td><td></td><td data-label="Payment">' + money(totalPayment) +
+      '</td><td data-label="Interest">' + money(totalInterest) + '</td><td data-label="Principal">' +
+      money(totalPrincipal) + '</td><td></td></tr>';
+
+    lastData = {
+      loan: loan, months: months, rate: rate, methodName: methodName, rows: rows,
+      totalInterest: totalInterest, totalPayment: totalPayment, totalPrincipal: totalPrincipal,
+      fee: fee, net: net, eff: eff, firstPay: firstPay, startDate: d, offset: offset
+    };
+    if (imageShown) renderImage();
+
+    lastText = "Loan: " + money(loan) + " for " + months + " months at " + rate + "% per month (" + methodName + ")\n" +
+      "Monthly payment: " + money(firstPay) + "\n" +
+      "Total interest: " + money(totalInterest) + "\n" +
+      "Total repayment: " + money(totalPayment) +
+      (fee > 0 ? "\nProcessing fee: " + money(fee) + "\nAmount released: " + money(net) : "") +
+      "\nEffective rate: " + pct(eff) + " per month";
+  }
+
+  function setMethodHint() {}
+
+  (function buildMonthSelect() {
+    var sel = $("monthSelect");
+    var o = document.createElement("option");
+    o.value = ""; o.textContent = "Custom"; sel.appendChild(o);
+    for (var i = 1; i <= 60; i++) {
+      var op = document.createElement("option");
+      op.value = String(i); op.textContent = i + (i === 1 ? " month" : " months");
+      sel.appendChild(op);
+    }
+  })();
+
+  $("monthSelect").addEventListener("change", function () {
+    if (!this.value) { $("months").focus(); return; }
+    $("months").value = this.value;
+    syncPresets();
+    calculate();
+  });
+
+  function syncPresets() {
+    var m = parseInt($("months").value, 10);
+    $("monthSelect").value = (m >= 1 && m <= 60) ? String(m) : "";
+    var isPreset = false;
+    document.querySelectorAll("#termPresets button").forEach(function (b) {
+      var on = +b.dataset.months === m;
+      if (on) isPreset = true;
+      b.setAttribute("aria-pressed", String(on));
+    });
+    $("months").classList.toggle("custom-active", !isPreset && !isNaN(m));
+  }
+
+  document.querySelectorAll("#termPresets button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      $("months").value = b.dataset.months;
+      syncPresets();
+      calculate();
+    });
+  });
+
+  document.querySelectorAll("#methodToggle button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      method = b.dataset.method;
+      document.querySelectorAll("#methodToggle button").forEach(function (x) {
+        x.setAttribute("aria-pressed", String(x === b));
+      });
+      setMethodHint();
+      calculate();
+    });
+  });
+
+  ["loanAmount", "months", "interestRate", "feeRate", "startDate", "firstPay"].forEach(function (id) {
+    $(id).addEventListener("input", function () {
+      if (id === "months") syncPresets();
+      calculate();
+    });
+  });
+
+  $("copyBtn").addEventListener("click", function () {
+    var status = $("copyStatus");
+    if (!lastText) { status.textContent = "Nothing to copy yet."; return; }
+    function done(ok) {
+      status.textContent = ok ? "Summary copied." : "Copy is blocked here. Select and copy the summary text instead.";
+      setTimeout(function () { status.textContent = ""; }, 3000);
+    }
+    function fallback() {
+      try {
+        var ta = document.createElement("textarea");
+        ta.value = lastText;
+        ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        done(ok);
+      } catch (e) { done(false); }
+    }
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(lastText).then(function () { done(true); }, fallback);
+      } else { fallback(); }
+    } catch (e) { fallback(); }
+  });
+
+
+  // ---------- Schedule image ----------
+  var canvas = document.createElement("canvas");
+  var downloadsApi = null;
+
+  var imageMode = "lender";
+
+  function drawSchedule(mode) {
+    var d = lastData;
+    if (!d) return false;
+    var borrower = mode === "borrower";
+    var S = 2, pad = 40, rowH = 46, headH = 50;
+    var cols = borrower ? [
+      { t: "Month", w: 120, a: "left" },
+      { t: "Due date", w: 260, a: "left" },
+      { t: "Payment", w: 240, a: "right" }
+    ] : [
+      { t: "Month", w: 90, a: "left" },
+      { t: "Due date", w: 170, a: "left" },
+      { t: "Payment", w: 150, a: "right" },
+      { t: "Interest", w: 140, a: "right" },
+      { t: "Principal", w: 150, a: "right" },
+      { t: "Balance", w: 150, a: "right" },
+      { t: "Status", w: 270, a: "left" }
+    ];
+    var tableW = cols.reduce(function (s, k) { return s + k.w; }, 0);
+    var W = tableW + pad * 2;
+
+    var lines;
+    if (borrower) {
+      lines = [
+        "Loan amount " + money(d.loan) + "   |   Term " + d.months + (d.months === 1 ? " month" : " months"),
+        "Interest rate " + d.rate + "% per month   |   Monthly payment " + money(d.firstPay)
+      ];
+    } else {
+      lines = [
+        "Loan " + money(d.loan) + " for " + d.months + (d.months === 1 ? " month" : " months") +
+          " at " + d.rate + "% per month (" + d.methodName + ")",
+        "Monthly payment " + money(d.firstPay) + "   |   Total interest " + money(d.totalInterest) +
+          "   |   Total repayment " + money(d.totalPayment)
+      ];
+      if (d.fee > 0) lines.push("Processing fee " + money(d.fee) + "   |   Amount released " + money(d.net));
+    }
+    var topH = 56 + 32 * lines.length + 20;
+    var H = pad + topH + headH + rowH * d.rows.length + rowH + pad + 24;
+    canvas.width = W * S; canvas.height = H * S;
+    var c = canvas.getContext("2d");
+    c.setTransform(S, 0, 0, S, 0, 0);
+    var font = '"IBM Plex Sans", "Segoe UI", Arial, sans-serif';
+
+    c.fillStyle = "#ffffff"; c.fillRect(0, 0, W, H);
+    c.textBaseline = "middle";
+
+    c.fillStyle = "#13202b";
+    c.font = "700 30px " + font; c.textAlign = "left";
+    c.fillText("Payment schedule", pad, pad + 16);
+    c.font = "400 18px " + font; c.fillStyle = "#3d4f5c";
+    lines.forEach(function (t, i) { c.fillText(t, pad, pad + 56 + 32 * i); });
+
+    var y = pad + topH;
+
+    c.fillStyle = "#13202b"; c.fillRect(pad, y, tableW, headH);
+    c.fillStyle = "#ffffff"; c.font = "600 17px " + font;
+    var x = pad;
+    cols.forEach(function (k) {
+      if (k.a === "right") { c.textAlign = "right"; c.fillText(k.t, x + k.w - 14, y + headH / 2); }
+      else { c.textAlign = "left"; c.fillText(k.t, x + 14, y + headH / 2); }
+      x += k.w;
+    });
+    y += headH;
+
+    c.font = "400 17px " + font;
+    d.rows.forEach(function (r, idx) {
+      if (idx % 2 === 1) { c.fillStyle = "#f3f6f8"; c.fillRect(pad, y, tableW, rowH); }
+      var due = d.startDate ? dateFmt.format(addMonths(d.startDate, r.n - 1 + d.offset)) : "";
+      var cells = borrower
+        ? [String(r.n), due, money(r.payment)]
+        : [String(r.n), due, money(r.payment), money(r.interest), money(r.principal), money(r.balance), ""];
+      c.fillStyle = "#13202b";
+      var cx = pad;
+      cols.forEach(function (k, i) {
+        if (k.a === "right") { c.textAlign = "right"; c.fillText(cells[i], cx + k.w - 14, y + rowH / 2); }
+        else { c.textAlign = "left"; c.fillText(cells[i], cx + 14, y + rowH / 2); }
+        cx += k.w;
+      });
+      y += rowH;
+    });
+
+    c.fillStyle = "#e3eaee"; c.fillRect(pad, y, tableW, rowH);
+    c.fillStyle = "#13202b"; c.font = "700 17px " + font;
+    var tcells = borrower
+      ? ["Total", "", money(d.totalPayment)]
+      : ["Total", "", money(d.totalPayment), money(d.totalInterest), money(d.totalPrincipal), "", ""];
+    var tx = pad;
+    cols.forEach(function (k, i) {
+      if (k.a === "right") { c.textAlign = "right"; c.fillText(tcells[i], tx + k.w - 14, y + rowH / 2); }
+      else { c.textAlign = "left"; c.fillText(tcells[i], tx + 14, y + rowH / 2); }
+      tx += k.w;
+    });
+    var bottom = y + rowH;
+
+    c.strokeStyle = "#b9c6cf"; c.lineWidth = 1;
+    var top = pad + topH + headH;
+    for (var ry = top; ry <= bottom; ry += rowH) {
+      c.beginPath(); c.moveTo(pad, ry + 0.5); c.lineTo(pad + tableW, ry + 0.5); c.stroke();
+    }
+    var gx = pad;
+    for (var i = 0; i <= cols.length; i++) {
+      c.beginPath(); c.moveTo(gx + 0.5, top - headH); c.lineTo(gx + 0.5, bottom); c.stroke();
+      if (i < cols.length) gx += cols[i].w;
+    }
+    c.strokeStyle = "#13202b"; c.lineWidth = 2;
+    c.strokeRect(pad, top - headH, tableW, bottom - (top - headH));
+
+    c.fillStyle = "#6b7c88"; c.font = "400 14px " + font; c.textAlign = "left";
+    c.fillText("Generated " + dateFmt.format(new Date()), pad, bottom + 28);
+    return true;
+  }
+
+  function renderImage() {
+    if (!drawSchedule(imageMode)) { $("imgStatus").textContent = "Enter valid loan details first."; return; }
+    $("scheduleImg").src = canvas.toDataURL("image/png");
+    $("scheduleImg").alt = imageMode === "borrower"
+      ? "Borrower payment schedule showing month, due date and payment"
+      : "Payment schedule with a blank status column";
+    $("imgPreview").hidden = false;
+    imageShown = true;
+    $("imgStatus").textContent = "";
+    $("saveImgBtn").hidden = false;
+  }
+
+  function generate(mode) {
+    imageMode = mode;
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(renderImage, renderImage);
+    } else { renderImage(); }
+  }
+
+  $("genImgBtn").addEventListener("click", function () { generate("lender"); });
+  $("genBorrowerBtn").addEventListener("click", function () { generate("borrower"); });
+
+  $("saveImgBtn").addEventListener("click", function () {
+    var st = $("imgStatus");
+    if (!lastData) return;
+    drawSchedule(imageMode);
+    canvas.toBlob(function (blob) {
+      if (!blob) { st.textContent = "Could not create the image."; return; }
+      var name = imageMode === "borrower" ? "payment-schedule-borrower.png" : "payment-schedule.png";
+      if (downloadsApi) {
+        downloadsApi.save({ filename: name, data: blob }).then(
+          function () { st.textContent = "Picture saved."; },
+          function (err) {
+            st.textContent = (err && err.code === "declined") ? "Save cancelled." : "Saving is not available here. Press and hold the picture instead.";
+          }
+        );
+      } else {
+        try {
+          var a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = name;
+          document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+          st.textContent = "Picture saved to your downloads.";
+        } catch (e) {
+          st.textContent = "Saving is not available here. Press and hold the picture instead.";
+        }
+      }
+    }, "image/png");
+  });
+
+  // Enable direct saving when the viewer grants it
+  (function () {
+    try {
+      if (window.claude && typeof window.claude.use === "function") {
+        window.claude.use("downloads").then(function (api) {
+          downloadsApi = api || null;
+          if (imageShown) renderImage();
+        }, function () {});
+      }
+    } catch (e) {}
+  })();
+
+  function todayISO() {
+    var t = new Date();
+    return t.getFullYear() + "-" + String(t.getMonth() + 1).padStart(2, "0") + "-" + String(t.getDate()).padStart(2, "0");
+  }
+
+  $("resetBtn").addEventListener("click", function () {
+    $("loanAmount").value = "23000";
+    $("months").value = "3";
+    $("interestRate").value = "5.73";
+    $("feeRate").value = "0";
+    $("startDate").value = todayISO();
+    $("firstPay").value = "1";
+    method = "flat";
+    document.querySelectorAll("#methodToggle button").forEach(function (x) {
+      x.setAttribute("aria-pressed", String(x.dataset.method === "flat"));
+    });
+    setMethodHint();
+    syncPresets();
+    calculate();
+    $("loanAmount").focus();
+  });
+
+  setMethodHint();
+  syncPresets();
+  calculate();
+})();
+</script>
+</body>
+</html>
